@@ -6,11 +6,17 @@ const topojson = require('topojson');
 const clip = require('geojson-clip-polygon');
 const _ = require('lodash');
 var async = require("async");
+const h3 = require('h3-js');
+var NDDB = require('NDDB').NDDB;
+var db = new NDDB();
+db.loadSync('h3db.json');
+db.index('id');
+db.rebuildIndexes();
 
 const restify = require('restify');
 const server = restify.createServer();
 
-
+server.use(restify.plugins.bodyParser({}));
 
 //const luftrom = JSON.parse(fs.readFileSync('luftrom.geojson', 'utf8'));
 
@@ -25,7 +31,7 @@ const luftrom = topojson.feature(luftrom_tpj,luftrom_tpj.objects.luftrom);
 
 var clipped = [];
 var collection;
-
+/*
 async.eachOfSeries(
 	luftrom.features,
 	function(feature,key,callback){
@@ -46,7 +52,7 @@ async.eachOfSeries(
 		collection = turf.featureCollection(clipped);
 	}
 );
-
+*/
 
 const classC = gjfilter(luftrom, ["==", "class", "C"]);
 
@@ -88,6 +94,39 @@ server.get('/outline',function(req, res, next){
 server.get('/outline_tpj',function(req, res, next){
   res.send(kommuner_tpj);
   next();
+});
+
+server.get('/h3ToGeoBoundary/:h3Address', function(req,res,next){
+	var geo = h3.h3ToGeoBoundary(req.params.h3Address,true);
+ 	res.send(turf.polygon([geo]));
+ 	next();
+});
+
+server.get('/cell/:zoom/:id', function(req,res,next){
+	var item = db.id.get(req.params.id);
+	var geo = h3.h3SetToMultiPolygon(item[req.params.zoom],true);
+	geo[0] = _.filter(geo[0],function(d){
+		return d.length > 2;
+	});
+ 	res.send(turf.multiPolygon(geo));	
+ 	next();
+});
+
+server.get('/geojson/:id', function(req,res,next){
+	var item = db.id.get(req.params.id);
+ 	res.send(item.geojson);	
+ 	next();
+});
+
+
+server.post('/h3SetToMultiPolygon', function(req,res,next){
+	var geo = h3.h3SetToMultiPolygon(req.body,true);
+
+	geo[0] = _.filter(geo[0],function(d){
+		return d.length > 2;
+	});
+ 	res.send(turf.multiPolygon(geo));
+ 	next();
 });
 
 server.get('/hello/:name', respond);

@@ -58,11 +58,18 @@ function toHexagons(feature, zoom) {
 	var hexagons = h3.polyfill(feature.geometry.coordinates[0],zoom, true);
 	console.log(hexagons.length);
 	var compacted = h3.compact(hexagons);
-	//console.log(compacted.length);
+	console.log(hexagons);
 	const coordinates = h3.h3SetToMultiPolygon(hexagons, true)
 	coordinates[0] = _.filter(coordinates[0],function(d){
 		return d.length > 3;
 	});
+
+	var bad = _.filter(coordinates[0],function(d){
+		return d.length < 4;
+	});
+
+	console.dir(bad);
 	var multiPoly = turf.multiPolygon(coordinates);
-	return multiPoly;
+	var poly = turf.polygon(coordinates[0]);
+	return poly;
 }
