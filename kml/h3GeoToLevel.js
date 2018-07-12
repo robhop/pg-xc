@@ -20,6 +20,7 @@ if(!argv._.length)
 
 var redis = new Redis(7777);
 
+var prefix = argv.p ? argv.p + '-' : '';
 
 var geojson;
 if(argv.t) {
@@ -135,7 +136,7 @@ function getProperties(p) {
   if(_.has(p,'name')) o.name = p.name;
   if(_.has(p,'navn')) o.name = p.navn;
   if(_.has(p,'fylkenr')) o.fylkenr = p.fylkenr;
-  o.id = _.has(p,'id') ? p.id : slug(o.name,{lower:true});
+  o.id = _.has(p,'id') ? p.id : slug(prefix + o.name,{lower:true});
 
   return o;
 }

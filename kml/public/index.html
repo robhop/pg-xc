@@ -44,61 +44,55 @@
 		id: 'mapbox.light'
 	}).addTo(map);
 
-	var ok = {
-	    "color": "#ff7800",
-	    "weight": 1,
-	    "opacity": 0.25
+
+	var groupC = L.layerGroup();
+	var groupD = L.layerGroup();
+	var groupG = L.layerGroup();
+	var groupR = L.layerGroup();
+	var groupLuftsport = L.layerGroup();
+	var groupKommuner = L.layerGroup();
+	
+
+	var overlayMaps = {
+		"C": groupC,
+	    "D": groupD,
+		"G": groupG,
+	    "R": groupR,
+	    "Luftsport": groupLuftsport,
+	    "Kommuner": groupKommuner
 	};
 
-	var no = {
-	    "color": "#222222",
-	    "weight": 1,
-	    "opacity": 0.95,
-	    "fillOpacity": 0.5
-	};
+	L.control.layers(null,overlayMaps).addTo(map);	
 
-	function filter(feature, layer) {
-	    // does this feature have a property named popupContent?
-	    if (feature.properties && feature.properties.class) {
-	        
-	        switch(feature.properties.class) {
-	        	case "Luftsport":
-	        		return false;
-	        	case "R":
-	        		return true;
-	        	case "D":
-	        		return true;
-        		
-	        	default:
-	        		
-	        		return true;
-
-	        }
-	        return false;
-	    }
-	}
-
-
-
-    function style(feature) {
-	        switch(feature.properties.class) {
-	        	case "R":
-	        		return no;
-	        	case "C":
-	        		return no;
-	        	case "D":
-	        		return no;        		
-	        	case "G":
-	        		return {color: "#00ff00"};
-	        }
-    }
-
-
-	d3.json('/cell/10/oslo').then(function(luftrom) {
-		console.log(luftrom);
-		var luftromLayer = L.geoJSON(luftrom, {
-			}).addTo(map);
+	d3.json('/group/7/C').then(function(x) {
+		L.geoJSON(x, {
+			}).addTo(groupC);	
 	});
+
+	d3.json('/group/7/D').then(function(x) {	
+		L.geoJSON(x, {
+			}).addTo(groupD);	
+	});	
+
+	d3.json('/group/7/G').then(function(x) {	
+		L.geoJSON(x, {
+			}).addTo(groupG);	
+	});	
+
+	d3.json('/group/7/R').then(function(x) {	
+		L.geoJSON(x, {
+			}).addTo(groupR);	
+	});	
+
+	d3.json('/group/7/Luftsport').then(function(x) {	
+		L.geoJSON(x, {
+			}).addTo(groupLuftsport);	
+	});
+
+	d3.json('/group/7/kommuner').then(function(x) {	
+		L.geoJSON(x, {
+			}).addTo(groupKommuner);	
+	});	
 
 </script>
 

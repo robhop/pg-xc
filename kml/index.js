@@ -129,11 +129,30 @@ server.get('/cellboundary/:zoom/:id', function(req,res,next){
 	});
 });
 
+
+server.get('/points/:zoom/:id', function(req,res,next){
+
+	var id = 'set:'+ req.params.id + ':h3:points:zoom-' + req.params.zoom;
+	redis.smembers(id, function (err, result) {
+
+	  	if(err) return next(err);
+
+	  	var geo = h3.h3SetToMultiPolygon(result,true);
+		geo[0] = _.filter(geo[0],function(d){
+			return d.length > 2;
+		});
+	 	res.send(turf.multiPolygon(geo));	
+	 	next();
+	});
+});
+
 server.get('/bigcell/:zoom/:id', function(req,res,next){
 
-	var id = 'set:'+ req.params.id + ':h3:boundary:zoom-' + req.params.zoom;
-	var boundary_id = 'set:'+ req.params.id + ':h3:zoom-' + req.params.zoom;
-	redis.sunion(id, boundary_id, function (err, result) {
+	var id = 'set:'+ req.params.id + ':h3:interior:zoom-' + req.params.zoom;
+	var boundary_id = 'set:'+ req.params.id + ':h3:boundary:zoom-' + req.params.zoom;	
+	var points_id = 'set:'+ req.params.id + ':h3:points:zoom-' + req.params.zoom;
+
+	redis.sunion(id, boundary_id, points_id, function (err, result) {
 
 	  	if(err) return next(err);
 
@@ -152,7 +171,7 @@ server.get('/group/:zoom/:id', function(req,res,next){
 	var features = [];
 
   	var q = async.queue(function(id, callback) {
-		redis.smembers('set:'+ id + ':h3:zoom' + req.params.zoom, function (err, result) {
+		redis.smembers('set:'+ id + ':h3:interior:zoom-' + req.params.zoom, function (err, result) {
 		  	if(err) return next(err);
 
 		  	var geo = h3.h3SetToMultiPolygon(result,true);
