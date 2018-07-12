@@ -23,8 +23,7 @@ var q = async.queue(function(task, callback) {
 	console.dir(task);
     //polyfillSet(task.id, task.zoom, callback);
 
-
-	const child = spawn('node', ['child_polyfill.js', task.id, '-z', task.zoom]);
+	const child = spawn('node', ['child_polyfill.js', task, '-f', argv.f, '-t', argv.t]);
 
 	child.on('exit', function (code, signal) {
 		if(code) console.log('child process exited with ' + `code ${code} and signal ${signal}`);
@@ -44,9 +43,7 @@ redis.smembers('properties:id').then(function (result) {
 		.chain(result)
 		.filter((o) => { return o.match(argv._); })
 		.each(o => {
-			_.each(_.range(Number(argv.f), Number(argv.t) + 1), (zoom) => {
-				q.push({id:o, zoom:zoom});
-			});
+			q.push(o);
 		})
 		.value();
 });
