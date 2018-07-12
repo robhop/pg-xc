@@ -7,11 +7,9 @@ const clip = require('geojson-clip-polygon');
 const _ = require('lodash');
 var async = require("async");
 const h3 = require('h3-js');
-var NDDB = require('NDDB').NDDB;
-var db = new NDDB();
-db.loadSync('h3db.json');
-db.index('id');
-db.rebuildIndexes();
+var Redis = require('ioredis');
+
+var redis = new Redis(7777);
 
 const restify = require('restify');
 const server = restify.createServer();
@@ -103,19 +101,87 @@ server.get('/h3ToGeoBoundary/:h3Address', function(req,res,next){
 });
 
 server.get('/cell/:zoom/:id', function(req,res,next){
-	var item = db.id.get(req.params.id);
-	var geo = h3.h3SetToMultiPolygon(item[req.params.zoom],true);
-	geo[0] = _.filter(geo[0],function(d){
-		return d.length > 2;
+	redis.smembers('set:'+ req.params.id + ':h3:zoom-' + req.params.zoom, function (err, result) {
+
+	  	if(err) return next(err);
+
+	  	var geo = h3.h3SetToMultiPolygon(result,true);
+		geo[0] = _.filter(geo[0],function(d){
+			return d.length > 2;
+		});
+	 	res.send(turf.multiPolygon(geo));	
+	 	next();
 	});
- 	res.send(turf.multiPolygon(geo));	
- 	next();
 });
 
+
+server.get('/cellboundary/:zoom/:id', function(req,res,next){
+	redis.smembers('set:'+ req.params.id + ':h3:boundary:zoom-' + req.params.zoom, function (err, result) {
+
+	  	if(err) return next(err);
+
+	  	var geo = h3.h3SetToMultiPolygon(result,true);
+		geo[0] = _.filter(geo[0],function(d){
+			return d.length > 2;
+		});
+	 	res.send(turf.multiPolygon(geo));	
+	 	next();
+	});
+});
+
+server.get('/bigcell/:zoom/:id', function(req,res,next){
+
+	var id = 'set:'+ req.params.id + ':h3:boundary:zoom-' + req.params.zoom;
+	var boundary_id = 'set:'+ req.params.id + ':h3:zoom-' + req.params.zoom;
+	redis.sunion(id, boundary_id, function (err, result) {
+
+	  	if(err) return next(err);
+
+	  	var geo = h3.h3SetToMultiPolygon(result,true);
+		geo[0] = _.filter(geo[0],function(d){
+			return d.length > 2;
+		});
+	 	res.send(turf.multiPolygon(geo));	
+	 	next();
+	});
+});
+
+
+server.get('/group/:zoom/:id', function(req,res,next){
+
+	var features = [];
+
+  	var q = async.queue(function(id, callback) {
+		redis.smembers('set:'+ id + ':h3:zoom' + req.params.zoom, function (err, result) {
+		  	if(err) return next(err);
+
+		  	var geo = h3.h3SetToMultiPolygon(result,true);
+			geo[0] = _.filter(geo[0],function(d){
+				return d.length > 2;
+			});
+		 	features.push(turf.multiPolygon(geo));
+		 	callback();	
+		});
+	}, 2);
+
+	q.drain = function() { 	
+	    res.send(turf.featureCollection(features));	
+	 	next();
+	};
+
+	redis.smembers('group:'+ req.params.id, function (err, ids) {
+	  	if(err) return next(err);
+	  	q.push(ids);
+	});
+});
+
+
 server.get('/geojson/:id', function(req,res,next){
-	var item = db.id.get(req.params.id);
- 	res.send(item.geojson);	
- 	next();
+	redis.get('set:'+ req.params.id + ':geojson', function (err, result) {
+	  	if(err) return next(err);
+	 	res.send(JSON.parse(result));	
+	 	next();
+	});
 });
 
 

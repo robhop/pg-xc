@@ -94,7 +94,7 @@
     }
 
 
-	d3.json('luftrom').then(function(luftrom) {
+	d3.json('/cell/10/oslo').then(function(luftrom) {
 		console.log(luftrom);
 		var luftromLayer = L.geoJSON(luftrom, {
 			}).addTo(map);
