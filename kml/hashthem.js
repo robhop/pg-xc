@@ -23,7 +23,7 @@ var q = async.queue(function(task, callback) {
 	console.dir(task);
     //polyfillSet(task.id, task.zoom, callback);
 
-	const child = spawn('node', ['child_hashthem.js', task, '-f', argv.f, '-t', argv.t]);
+	const child = spawn('node', ['child_hashthem.js', task, '-t', argv.t]);
 
 	child.on('exit', function (code, signal) {
 		if(code) console.log('child process exited with ' + `code ${code} and signal ${signal}`);

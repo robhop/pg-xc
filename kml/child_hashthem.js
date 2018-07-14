@@ -13,14 +13,10 @@ var redis = new Redis(6379);
 if(!argv._.length) 
  	process.exit();
 
-if(!argv.f) 
- 	process.exit();
-
 if(!argv.t) 
  	process.exit(); 
 
 var id = argv._;
-
 
 redis.get('set:' + id + ':geojson').then(function (result) {
 
@@ -61,27 +57,36 @@ redis.get('set:' + id + ':geojson').then(function (result) {
 				.union(points)
 				.uniq()
 				.value();
+
+			points = _
+				.chain(points)
+				.map((p) => { return h3.kRing(p,1)})
+				.flatten()
+				.uniq()
+				.value();
 			console.log(points.length);
 		}
 
 		setInsideOutside(points, geojson,inside,outside);
 
-
-
-		console.log("ZOM " +zoom);
-		console.log("PT L" +points.length);
-		//console.log("PT " +JSON.stringify(points));
-
-		console.log("IN L" +inside.size);
-		//console.log("IN " +JSON.stringify(Array.from(inside)));		
-
-	//	console.log(JSON.stringify(sets));
-
 		if(inside.size == 0) return callback();
 
 		sets[zoom] = Array.from(inside);
 
-		fs.writeFileSync(zoom + '_dataout.json',JSON.stringify(Array.from(inside)), "utf8");
+	//	fs.writeFileSync(zoom + '_dataout.json',JSON.stringify(Array.from(inside)), "utf8");
+
+		var set_id = 'set:' + id + ':h3:zoom-' + zoom;
+
+			var pipeline = redis.pipeline();
+			pipeline
+				.del(set_id)
+				.sadd(set_id, sets[zoom]);
+
+			var promise = pipeline.exec();
+			promise.then(function() {
+				callback();
+			});
+
 
 /*
 
@@ -123,7 +128,7 @@ redis.get('set:' + id + ':geojson').then(function (result) {
 		//console.log("OU l " + outside.size);
 
 		*/
-		callback();
+		
 		
 	},
 	function(err){
