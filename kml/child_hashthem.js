@@ -31,22 +31,59 @@ redis.get('set:' + id + ':geojson').then(function (result) {
 
 	var geojson = JSON.parse(result);
 
+	const sets = {};
+
 	async.eachOfSeries(
-		_.range(Number(argv.f), Number(argv.t) + 1),
+		_.range(Number(1), Number(argv.t) + 1),
 		(zoom,key,callback) => {
 
 		const inside = new Set();
 		const outside = new Set();
-		const ringed = new Set();
 
-		var points =  _
+		var points = []
+
+		points = _
 			.chain(geojson.geometry.coordinates)
 			.flatten()
 			.map(function(c){
-				return h3.geoToH3(c[1], c[0], zoom);  
+				if(zoom > 1) return h3.h3ToChildren(h3.geoToH3(c[1], c[0], zoom-1),zoom);
+				else return h3.geoToH3(c[1], c[0], zoom);  
 		  })
+		  .flatten()
 		  .uniq()
 		  .value();
+
+		if(sets[zoom-1]) {
+			points = _
+				.chain(sets[zoom-1])
+				.map((h) => { return h3.h3ToChildren(h,zoom);})
+				.flatten()
+				.union(points)
+				.uniq()
+				.value();
+			console.log(points.length);
+		}
+
+		setInsideOutside(points, geojson,inside,outside);
+
+
+
+		console.log("ZOM " +zoom);
+		console.log("PT L" +points.length);
+		//console.log("PT " +JSON.stringify(points));
+
+		console.log("IN L" +inside.size);
+		//console.log("IN " +JSON.stringify(Array.from(inside)));		
+
+	//	console.log(JSON.stringify(sets));
+
+		if(inside.size == 0) return callback();
+
+		sets[zoom] = Array.from(inside);
+
+		fs.writeFileSync(zoom + '_dataout.json',JSON.stringify(Array.from(inside)), "utf8");
+
+/*
 
 		var old_count = 0;
 		setInsideOutside(points,geojson,inside,outside);
@@ -84,6 +121,8 @@ redis.get('set:' + id + ':geojson').then(function (result) {
 		console.log("IN l " + inside.size);
 		//console.log("OU "+JSON.stringify(Array.from(outside)));
 		//console.log("OU l " + outside.size);
+
+		*/
 		callback();
 		
 	},
