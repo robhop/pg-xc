@@ -60,7 +60,7 @@ redis.get('set:' + id + ':geojson').then(function (result) {
 
 			points = _
 				.chain(points)
-				.map((p) => { return h3.kRing(p,1)})
+				.map((p) => { return h3.kRing(p,2)})
 				.flatten()
 				.uniq()
 				.value();
