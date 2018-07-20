@@ -7,12 +7,14 @@ const topojson = require('topojson');
 const mongojs = require('mongojs');
 const argv = require('minimist')(process.argv.slice(2));
 
-const blacklist = ['orland-tma-5','balder-cta','heidrun-cta', 'es-r09', 'en-d209-risavika', 'es-r63d'];
+
 
 if(!argv._.length) 
   process.exit();
 
 const prefix = argv.p ? argv.p + '-' : '';
+const blacklist = _.map(['orland-tma-5','balder-cta','heidrun-cta', 'es-r09', 'en-d209-risavika', 'es-r63d'], (b) => {return prefix + b;});
+
 
 var db = mongojs('nl3');
 var featuresCollection = db.collection('features')

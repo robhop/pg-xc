@@ -21,6 +21,7 @@ if(!argv._.length)
 var redis = new Redis(7777);
 
 var prefix = argv.p ? argv.p + '-' : '';
+blacklist = _.map(blacklist, (b) => {return prefix + b;});
 
 var geojson;
 if(argv.t) {

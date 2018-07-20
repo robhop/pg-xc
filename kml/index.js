@@ -9,6 +9,7 @@ var async = require("async");
 const h3 = require('h3-js');
 
 const mongojs = require('mongojs');
+
 var db = mongojs('nl3');
 var featuresCollection = db.collection('features'); 
 var hashesCollection = db.collection('hashes'); 
@@ -19,36 +20,54 @@ const server = restify.createServer();
 server.use(restify.plugins.bodyParser({}));
 
 
+
 server.get('/api/cell/:zoom/:id', function(req,res,next){
 
-  var id = req.params.id + '-' + req.params.zoom;
+	var id = req.params.id + '-' + req.params.zoom;
 
+	console.log(id);
 	hashesCollection.findOne({_id : id }, function(err, o) {
-		  	if(err || !o){
-		  		res.send(404);
-		  		return next();
-		  	}
+	    
+	    if (!o) {
+	    	res.send(404);
+	    	return next();
 
-		  var geo = h3.h3SetToMultiPolygon(o.hashes,true);
-			geo[0] = _.filter(geo[0],function(d){
-				return d.length > 2;
-			});
-		 	res.send(turf.multiPolygon(geo));	
-		 	next();
+	    }
+	    console.log("Compacted " + o.hashes.length);
+
+	    var uc = h3.uncompact(o.hashes,Number(req.params.zoom))
+
+	    console.log("Uncompact " + uc.length);
+
+		var geo = h3.h3SetToMultiPolygon(uc,true);
+		geo[0] = _.filter(geo[0],function(d){
+			return d.length > 2;
+		});
+	 	res.send(turf.multiPolygon(geo));	
+	 	next();
+	});
+
+});
+
+
+server.get('/api/cell/search/:pattern', function(req,res,next){
+
+	var regexp = new RegExp(req.params.pattern);
+	featuresCollection.find({_id: regexp}, function(err, os) {
+		if(err || !os){
+			res.send(404);
+			return next();
+		}
+		res.send(_.map(os, (o) => {return o.properties;}));	
+		next();
 	});
 });
 
-server.get('/api/cell/', function(req,res,next){
 
-	featuresCollection.find({}, function(err, os) {
-		  	if(err || !os){
-		  		res.send(404);
-		  		return next();
-		  	}
-		 	res.send(_.map(os, (o) => {return o.properties;}));	
-		 	next();
-	});
-});
+
+
+
+
 
 
 server.get('/cellboundary/:zoom/:id', function(req,res,next){
@@ -150,11 +169,16 @@ server.post('/h3SetToMultiPolygon', function(req,res,next){
  	next();
 });
 
-server.get('/', restify.plugins.serveStatic({
-  directory: './public',
+server.get('/*', restify.plugins.serveStatic({
+  directory: './dist',
   file: 'index.html'
 }));
 
+
+server.get("/\/?.*/", restify.plugins.serveStatic({
+  directory: './dist',
+  default: 'index.html'
+}));
 
 
 server.listen(8081, function() {
