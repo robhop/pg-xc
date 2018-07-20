@@ -30,6 +30,8 @@ var q = async.queue(function(task, callback) {
 	
 	var grid = turf.pointGrid(turf.bbox(geojson),km,{mask:geojson});
 
+	console.dir("Got grid for " + task._id + ' ' + grid.features.length);	
+
 	var points = _
 		.chain(grid.features)
 		.map((f) => {
@@ -38,6 +40,8 @@ var q = async.queue(function(task, callback) {
 		})
 		.value();
 
+	console.dir("Got points for " + task._id + ' ' + points.length);	
+
 	const inside = new Set();
 	for (var i = points.length - 1; i >= 0; i--) {
 		var r = h3.h3ToGeo(points[i],true);
@@ -45,14 +49,28 @@ var q = async.queue(function(task, callback) {
 		if(turf.inside(p,geojson)) inside.add(points[i])
 	};
 
+	console.dir("Got inside for " + task._id + ' ' + inside.size);
 
 	var newKey = task._id + '-' + zoom;
 	var newDoc = {
 		_id: newKey,
 		hashes: Array.from(inside)
 	};
+	console.dir("Got hashes for " + task._id + ' ' + newDoc.hashes.length);
 
-	hashesCollection.insert(newDoc, callback);
+	if(argv.q) {
+		var tmp = _.filter(newDoc.hashes,h3.h3IsValid);
+		newDoc.hashes = h3.compact(tmp);
+	} 	
+
+	console.dir("Got compacted hashes for " + task._id + ' ' + newDoc.hashes.length);
+
+	hashesCollection.update({_id:newDoc._id}, newDoc, {upsert: true},  function (err) {
+		if(err)
+			console.log('Error ' );
+
+		callback();
+	});
 
 }, 3);
 
