@@ -43,7 +43,10 @@ server.get('/api/cell/:zoom/:id', function(req,res,next){
 		geo[0] = _.filter(geo[0],function(d){
 			return d.length > 2;
 		});
-	 	res.send(turf.multiPolygon(geo));	
+		var gj = turf.multiPolygon(geo);
+		gj.bbox = turf.bbox(gj);
+		console.dir(gj);
+	 	res.send(gj);	
 	 	next();
 	});
 
@@ -63,7 +66,22 @@ server.get('/api/cell/search/:pattern', function(req,res,next){
 	});
 });
 
+server.get('/api/cell/search/class/:value', function(req,res,next){
 
+
+	var value = req.params.value;
+	var key = req.params.key;
+
+	console.log(key + ' '  + value);
+	featuresCollection.find({"properties.class": value}, function(err, os) {
+		if(err || !os){
+			res.send(404);
+			return next();
+		}
+		res.send(_.map(os, (o) => {return o.properties;}));	
+		next();
+	});
+});
 
 
 
