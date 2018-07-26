@@ -18,6 +18,9 @@ const restify = require('restify');
 const server = restify.createServer();
 
 server.use(restify.plugins.bodyParser({}));
+server.use(restify.plugins.queryParser());
+
+const filter_zoom = 6;
 
 
 
@@ -49,6 +52,51 @@ server.get('/api/cell/:zoom/:id', function(req,res,next){
 	 	res.send(gj);	
 	 	next();
 	});
+
+});
+
+server.get('/api/cell/search', function(req,res,next){
+
+		var filter_array =[];
+		if(!Array.isArray(req.query.filter))
+			filter_array = [req.query.filter];
+		else
+			filter_array = req.query.filter;
+
+		var filter = _.map(filter_array, (f) => {return f + '-' + filter_zoom});
+		
+		console.dir(filter);
+
+		hashesCollection.find({_id : { $in: filter  }}, function(err, h) {
+			if(err || !h) {
+				res.send(404);
+				return next();
+			}
+			var hashes = _
+				.chain(h)
+				.map((h) => {return h.hashes;})
+				.flatten()
+				.uniq()
+				.value();
+
+			hashesCollection.find(
+				{ $and : 
+					[
+						{'hashes' : { $in: hashes  }},
+						{'_id' : /^luftrom/}
+					]
+				}, 
+				{_id : 1} , function(err, h2) {
+				if(err || !h2) {
+					res.send(404);
+					return next();
+				}
+
+				res.send(h2);	
+				next();
+
+			});
+		});
 
 });
 
